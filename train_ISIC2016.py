@@ -26,6 +26,7 @@ from enum import Enum
 # Custom imports
 import pretrainedmodels
 from cutout import *
+from focalloss import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -219,8 +220,8 @@ def train(options):
             transforms.RandomResizedCrop(input_size, scale=(0.7, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)]
-            Cutout(n_holes=1, length=16)) #These are default values
+            transforms.Normalize(mean=mean, std=std),
+            Cutout(n_holes=1, length=16)]) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
@@ -257,7 +258,10 @@ def train(options):
             pred = model(X)
             # Optimize
             optimizer.zero_grad()
-            loss = criterion(pred, y)
+            if options.focal == True:
+                loss = FocalLoss(gamma=2)(pred, y)
+            else:
+                loss = criterion(pred, y)
             train_loss += loss.item()
             loss.backward()
             optimizer.step()
