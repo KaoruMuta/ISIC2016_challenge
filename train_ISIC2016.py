@@ -27,7 +27,7 @@ from enum import Enum
 import pretrainedmodels
 from cutout import *
 from focalloss import *
-from se_resnext import *
+#from se_resnext import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
