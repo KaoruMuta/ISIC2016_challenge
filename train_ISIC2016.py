@@ -483,6 +483,7 @@ if __name__ == "__main__":
     parser.add_option("--useTorchVisionModels", action="store_true", dest="useTorchVisionModels", default=False, help="Use pre-trained models from the torchvision library")
     parser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
     parser.add_option("--cutout", action="store_true", dest="cutout", default=False, help="applying cutout")
+    parser.add_option("--focal", action="store_true", dest="focal", default=False, help="applying focal loss")
 
     #parser.add_option('--lr', action='store', type='float', dest='learning rate', default=0.0001, help='learning rate')
 
