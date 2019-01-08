@@ -27,6 +27,7 @@ from enum import Enum
 import pretrainedmodels
 from cutout import *
 from focalloss import *
+from se_resnext import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -259,7 +260,7 @@ def train(options):
             # Optimize
             optimizer.zero_grad()
             if options.focal == True:
-                loss = FocalLoss(gamma=2)(pred, y)
+                loss = FocalLoss(gamma=0.5)(pred, y)
             else:
                 loss = criterion(pred, y)
             train_loss += loss.item()
