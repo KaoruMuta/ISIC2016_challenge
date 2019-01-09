@@ -72,12 +72,15 @@ for epoch in range(start_epoch, 11):
                                  label.unsqueeze(1).repeat(1, PROPOSAL_NUM).view(-1))
 
         total_loss = raw_loss + rank_loss + concat_loss + partcls_loss
+        print(total_loss)
         total_loss.backward()
         raw_optimizer.step()
         part_optimizer.step()
         concat_optimizer.step()
         partcls_optimizer.step()
         progress_bar(i, len(trainloader), 'train')
+
+    print('epoch:', epoch)
 
     ##########################  evaluate net and save model  ###############################
     if epoch % SAVE_FREQ == 0:
