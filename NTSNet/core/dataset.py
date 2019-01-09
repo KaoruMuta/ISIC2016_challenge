@@ -23,6 +23,8 @@ class CUB():
                         if file.endswith(imageFormat):
                             self.train_img.append(os.path.abspath(os.path.join(root, file)))
                             break
+
+            print(len(self.train_img))
             for j in range(len(self.train_img)):
                 for i in range(900):
                     if self.train_img[j].split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
@@ -30,6 +32,7 @@ class CUB():
                             self.train_label.append(0)
                         else:
                             self.train_label.append(1)
+            print(len(self.train_label))
 
         if not self.is_train:
             for root, dirs, files in os.walk('2016test'):
