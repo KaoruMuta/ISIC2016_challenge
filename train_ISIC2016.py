@@ -242,7 +242,7 @@ def train(options):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std),
-            Cutout(n_holes=1, length=25)]) #These are default values
+            Cutout(n_holes=2, length=16)]) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
