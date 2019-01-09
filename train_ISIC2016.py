@@ -242,7 +242,7 @@ def train(options):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std),
-            Cutout(n_holes=1, length=16)]) #These are default values
+            Cutout(n_holes=1, length=25)]) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
@@ -415,14 +415,14 @@ def train(options):
             print(predictedLabels[idx], file=predchecking)
 
     # generate class activation mapping for the top1 prediction
-    CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
+    '''CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
 
     # render the CAM and output
     img = cv2.imread('2016test/ISIC_0000003.jpg')
     height, width, _ = img.shape
     heatmap = cv2.applyColorMap(cv2.resize(CAMs[0],(width, height)), cv2.COLORMAP_JET)
     result = heatmap * 0.3 + img * 0.5
-    cv2.imwrite('CAM.jpg', result)
+    cv2.imwrite('CAM.jpg', result)'''
 
     predictedLabels.clear()
     gtLabels.clear()
