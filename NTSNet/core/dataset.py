@@ -3,7 +3,6 @@ import scipy.misc
 import os
 from PIL import Image
 from torchvision import transforms
-from config import INPUT_SIZE
 import pandas as pd
 
 class CUB():
@@ -18,7 +17,7 @@ class CUB():
         self.is_train = is_train
         if self.is_train:
             #dataloading
-            for root, dirs, files in os.walk('../../2016train'):
+            for root, dirs, files in os.walk('2016train'):
                 for file in files:
                     for imageFormat in self.imageFormats:
                         if file.endswith(imageFormat):
@@ -33,7 +32,7 @@ class CUB():
                             self.train_label.append(1)
 
         if not self.is_train:
-            for root, dirs, files in os.walk('../../2016test'):
+            for root, dirs, files in os.walk('2016test'):
                 for file in files:
                     for imageFormat in self.imageFormats:
                         if file.endswith(imageFormat):
@@ -53,7 +52,7 @@ class CUB():
             img = Image.open(img)
             img = img.convert('RGB')
             #img = transforms.Resize((600, 600), Image.BILINEAR)(img)
-            img = transforms.RandomResizedCrop(INPUT_SIZE, scale=(0.7, 1.0))(img)
+            img = transforms.RandomResizedCrop(224, scale=(0.7, 1.0))(img)
             img = transforms.RandomHorizontalFlip()(img)
             img = transforms.ToTensor()(img)
             img = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(img)
