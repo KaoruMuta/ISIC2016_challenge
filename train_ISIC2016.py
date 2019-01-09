@@ -332,7 +332,6 @@ def train(options):
     oneHot = []
     pred_fold = []
     model.eval()
-    features_blobs = []
     #hooked feature map
     model._modules.get(finalconv_name).register_forward_hook(hook_feature)
     # get the softmax weight
