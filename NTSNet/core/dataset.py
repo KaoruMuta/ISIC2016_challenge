@@ -81,7 +81,7 @@ class CUB():
 
 
 if __name__ == '__main__':
-    dataset = CUB(root='./CUB_200_2011')
+    dataset = CUB()
     print(len(dataset.train_img))
     print(len(dataset.train_label))
     for data in dataset:
