@@ -137,6 +137,7 @@ class MyDataset(Dataset):
 
         return sample
 
+features_blobs = []
 def hook_feature(module, input, output):
     features_blobs.append(output.data.cpu().numpy())
 
@@ -345,7 +346,6 @@ def train(options):
         y = Variable(y).long().to(device)
         #testing the dataset
         bs, ncrops, c, h, w = X.size()
-        print('features_blobs', features_blobs)
         with torch.no_grad():
             temp_output = model(X.view(-1, c, h, w))
         outputs = temp_output.view(bs, ncrops, -1).mean(1)
