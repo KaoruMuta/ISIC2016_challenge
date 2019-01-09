@@ -3,13 +3,13 @@ import torch.utils.data
 from torch.nn import DataParallel
 from datetime import datetime
 from torch.optim.lr_scheduler import MultiStepLR
-from config import BATCH_SIZE, PROPOSAL_NUM, SAVE_FREQ, LR, WD, resume, save_dir
+from config import BATCH_SIZE, PROPOSAL_NUM, SAVE_FREQ, LR, WD, resume
 from core import model, dataset
 from core.utils import init_log, progress_bar
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 start_epoch = 1
-save_dir = os.path.join(save_dir, datetime.now().strftime('%Y%m%d_%H%M%S'))
+save_dir = 'NTS_model'
 if os.path.exists(save_dir):
     raise NameError('model dir exists!')
 os.makedirs(save_dir)
@@ -17,12 +17,12 @@ logging = init_log(save_dir)
 _print = logging.info
 
 # read dataset
-trainset = dataset.CUB(root='./CUB_200_2011', is_train=True, data_len=None)
+trainset = dataset.CUB(is_train=True, data_len=None)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE,
-                                          shuffle=True, num_workers=8, drop_last=False)
-testset = dataset.CUB(root='./CUB_200_2011', is_train=False, data_len=None)
+                                          shuffle=True, num_workers=0, drop_last=False)
+testset = dataset.CUB(is_train=False, data_len=None)
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
-                                         shuffle=False, num_workers=8, drop_last=False)
+                                         shuffle=False, num_workers=0, drop_last=False)
 # define model
 net = model.attention_net(topN=PROPOSAL_NUM)
 if resume:
@@ -48,7 +48,7 @@ schedulers = [MultiStepLR(raw_optimizer, milestones=[60, 100], gamma=0.1),
 net = net.cuda()
 net = DataParallel(net)
 
-for epoch in range(start_epoch, 500):
+for epoch in range(start_epoch, 11):
     for scheduler in schedulers:
         scheduler.step()
     ##########################  train the model  ###############################

@@ -10,12 +10,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 if not test_model:
     raise NameError('please set the test_model file to choose the checkpoint!')
 # read dataset
-trainset = dataset.CUB(root='./CUB_200_2011', is_train=True, data_len=None)
+trainset = dataset.CUB(is_train=True, data_len=None)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE,
-                                          shuffle=True, num_workers=8, drop_last=False)
-testset = dataset.CUB(root='./CUB_200_2011', is_train=False, data_len=None)
+                                          shuffle=True, num_workers=0, drop_last=False)
+testset = dataset.CUB(is_train=False, data_len=None)
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
-                                         shuffle=False, num_workers=8, drop_last=False)
+                                         shuffle=False, num_workers=0, drop_last=False)
 # define model
 net = model.attention_net(topN=PROPOSAL_NUM)
 ckpt = torch.load(test_model)
