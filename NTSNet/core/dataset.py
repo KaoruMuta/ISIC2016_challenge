@@ -19,6 +19,7 @@ class CUB():
             #dataloading
             for root, dirs, files in os.walk('2016train'):
                 for file in files:
+                    print(file)
                     for imageFormat in self.imageFormats:
                         if file.endswith(imageFormat):
                             self.train_img.append(os.path.abspath(os.path.join(root, file)))
