@@ -182,6 +182,7 @@ def train(options):
         std = model.std
         input_size = model.input_size[1]
 
+        finalconv_name = 'layer4'
         assert model.input_size[1] == model.input_size[2], "Error: Models expects different dimensions for height and width"
         assert model.input_space == "RGB", "Error: Data loaded in RGB format while the model expects BGR"
 
@@ -318,7 +319,7 @@ def train(options):
     model._modules.get(finalconv_name).register_forward_hook(hook_feature)
     # get the softmax weight
     params = list(model.parameters())
-    weight_softmax = np.squeeze(params[-2].data.numpy())
+    weight_softmax = np.squeeze(params[-2].data.cpu().numpy())
     for iterationIdx, data in enumerate(dataLoaderVal):
         X = data["data"]
         y = data["label"]
