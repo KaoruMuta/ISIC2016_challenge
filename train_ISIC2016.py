@@ -415,8 +415,7 @@ def train(options):
             print(predictedLabels[idx], file=predchecking)
 
     # generate class activation mapping for the top1 prediction
-    print('feature_blob', features_blobs[0])
-    CAMs = returnCAM(features_blobs[0], weight_softmax, 0)
+    CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
 
     # render the CAM and output
     img = cv2.imread('2016test/ISIC_0000003.jpg')
