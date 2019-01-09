@@ -313,8 +313,8 @@ def train(options):
     correctExamples = 0
     oneHot = []
     pred_fold = []
-    features_blobs = []
     model.eval()
+    feature_blobs = []
     #hooked feature map
     model._modules.get(finalconv_name).register_forward_hook(hook_feature)
     # get the softmax weight
@@ -328,6 +328,7 @@ def train(options):
         y = Variable(y).long().to(device)
         #testing the dataset
         bs, ncrops, c, h, w = X.size()
+        print('features_blobs', features_blobs)
         with torch.no_grad():
             temp_output = model(X.view(-1, c, h, w))
         outputs = temp_output.view(bs, ncrops, -1).mean(1)
