@@ -30,7 +30,6 @@ class CUB():
                             self.train_label.append(0)
                         else:
                             self.train_label.append(1)
-                        break
 
         if not self.is_train:
             for root, dirs, files in os.walk('2016test'):
@@ -44,7 +43,6 @@ class CUB():
                 for i in range(379):
                     if self.test_img[j].split(os.sep)[-1] == self.isic2016test.iloc[i][0] + '.jpg':
                         self.test_label.append(int(self.isic2016test.iloc[i][1]))
-                    break
 
     def __getitem__(self, index):
         if self.is_train:

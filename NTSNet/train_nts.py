@@ -48,12 +48,6 @@ schedulers = [MultiStepLR(raw_optimizer, milestones=[60, 100], gamma=0.1),
 net = net.cuda()
 net = DataParallel(net)
 
-for i, data in enumerate(trainloader):
-    img, label = data[0].cuda(), data[1].cuda()
-    print(img)
-    print(label)
-    if i==1:
-        break
 for epoch in range(start_epoch, 11):
     for scheduler in schedulers:
         scheduler.step()
