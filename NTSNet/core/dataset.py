@@ -7,7 +7,7 @@ from config import INPUT_SIZE
 
 
 class CUB():
-    def __init__(self, is_train=True, data_len=None):
+    def __init__(self, is_train=True):
         self.train_img = []
         self,train_label = []
         self.test_img = []
