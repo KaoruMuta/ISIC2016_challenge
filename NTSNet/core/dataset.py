@@ -9,7 +9,7 @@ from config import INPUT_SIZE
 class CUB():
     def __init__(self, is_train=True):
         self.train_img = []
-        self,train_label = []
+        self.train_label = []
         self.test_img = []
         self.test_label = []
         self.imageFormats = [".jpg", ".png", ".bmp", 'jpeg']
