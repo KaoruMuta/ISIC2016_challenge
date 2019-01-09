@@ -4,7 +4,7 @@ import os
 from PIL import Image
 from torchvision import transforms
 from config import INPUT_SIZE
-
+import pandas as pd
 
 class CUB():
     def __init__(self, is_train=True):
