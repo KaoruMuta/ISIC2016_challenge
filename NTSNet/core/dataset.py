@@ -24,13 +24,13 @@ class CUB():
                         if file.endswith(imageFormat):
                             self.train_img.append(os.path.abspath(os.path.join(root, file)))
                             break
-
-            for i in range(900):
-                if file.split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
-                    if self.isic2016train.iloc[i][1] == 'benign':
-                        self.train_label.append(0)
-                    else:
-                        self.train_label.append(1)
+            for j in range(len(self.train_img)):
+                for i in range(900):
+                    if self.train_img[j].split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
+                        if self.isic2016train.iloc[i][1] == 'benign':
+                            self.train_label.append(0)
+                        else:
+                            self.train_label.append(1)
 
         if not self.is_train:
             for root, dirs, files in os.walk('../../2016test'):
@@ -40,9 +40,10 @@ class CUB():
                             self.test_img.append(os.path.abspath(os.path.join(root, file)))
                             break
 
-            for i in range(379):
-                if file.split(os.sep)[-1] == self.isic2016test.iloc[i][0] + '.jpg':
-                    self.test_label.append(int(self.isic2016test.iloc[i][1]))
+            for j in range(len(self.test_img)):
+                for i in range(379):
+                    if self.test_img[j].split(os.sep)[-1] == self.isic2016test.iloc[i][0] + '.jpg':
+                        self.test_label.append(int(self.isic2016test.iloc[i][1]))
 
     def __getitem__(self, index):
         if self.is_train:
