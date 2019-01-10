@@ -52,9 +52,8 @@ class CUB():
             for j in range(len(self.test_img)):
                 for i in range(379):
                     if self.test_img[j].split(os.sep)[-1] == self.isic2016test.iloc[i][0] + '.jpg':
-                        print(int(self.isic2016test.iloc[i][1]))
                         self.test_label.append(int(self.isic2016test.iloc[i][1]))
-                    break
+                        break
 
 
 
