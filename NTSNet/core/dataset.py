@@ -6,26 +6,25 @@ from torchvision import transforms
 import pandas as pd
 
 class CUB():
-    def __init__(self, is_train=True):
+    def __init__(self, root_dir, is_train=True):
         self.train_img = []
         self.train_label = []
         self.test_img = []
         self.test_label = []
+        self.root_dir = root_dir
         self.imageFormats = [".jpg", ".png", ".bmp", 'jpeg']
         self.isic2016train = pd.read_csv('ISBI2016_ISIC_Part3_Training_GroundTruth.csv', header=None)
         self.isic2016test = pd.read_csv('ISBI2016_ISIC_Part3_Test_GroundTruth.csv', header=None)
         self.is_train = is_train
         if self.is_train:
             #dataloading
-            for root, dirs, files in os.walk('2016train'):
+            for root, dirs, files in os.walk(self.root_dir):
                 for file in files:
-                    print(file)
                     for imageFormat in self.imageFormats:
                         if file.endswith(imageFormat):
                             self.train_img.append(os.path.abspath(os.path.join(root, file)))
                             break
 
-            print(len(self.train_img))
             for j in range(len(self.train_img)):
                 for i in range(900):
                     if self.train_img[j].split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
@@ -33,10 +32,9 @@ class CUB():
                             self.train_label.append(0)
                         else:
                             self.train_label.append(1)
-            print(len(self.train_label))
 
         if not self.is_train:
-            for root, dirs, files in os.walk('2016test'):
+            for root, dirs, files in os.walk(self.root_dir):
                 for file in files:
                     for imageFormat in self.imageFormats:
                         if file.endswith(imageFormat):
@@ -85,12 +83,12 @@ class CUB():
 
 
 if __name__ == '__main__':
-    dataset = CUB()
+    dataset = CUB(root_dir='2016train')
     print(len(dataset.train_img))
     print(len(dataset.train_label))
     for data in dataset:
         print(data[0].size(), data[1])
-    dataset = CUB(is_train=False)
+    dataset = CUB(root_dir='2016train', is_train=False)
     print(len(dataset.test_img))
     print(len(dataset.test_label))
     for data in dataset:
