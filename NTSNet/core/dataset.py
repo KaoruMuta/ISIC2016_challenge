@@ -4,6 +4,8 @@ import os
 from PIL import Image
 from torchvision import transforms
 import pandas as pd
+import random
+from random import shuffle
 
 class CUB():
     def __init__(self, root_dir, is_train=True):
@@ -25,6 +27,9 @@ class CUB():
                             self.train_img.append(os.path.abspath(os.path.join(root, file)))
                             break
 
+            random.seed(0)
+            shuffle(self.train_img)
+
             for j in range(len(self.train_img)):
                 for i in range(900):
                     if self.train_img[j].split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
@@ -41,12 +46,17 @@ class CUB():
                         if file.endswith(imageFormat):
                             self.test_img.append(os.path.abspath(os.path.join(root, file)))
                             break
+            random.seed(0)
+            shuffle(self.test_img)
 
             for j in range(len(self.test_img)):
                 for i in range(379):
                     if self.test_img[j].split(os.sep)[-1] == self.isic2016test.iloc[i][0] + '.jpg':
+                        print(int(self.isic2016test.iloc[i][1]))
                         self.test_label.append(int(self.isic2016test.iloc[i][1]))
                     break
+
+
 
     def __getitem__(self, index):
         if self.is_train:
