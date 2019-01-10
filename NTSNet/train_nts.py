@@ -4,30 +4,44 @@ import torch.utils.data
 from torch.nn import DataParallel
 from datetime import datetime
 from torch.optim.lr_scheduler import MultiStepLR
-from config import BATCH_SIZE, PROPOSAL_NUM, SAVE_FREQ, LR, WD, resume
+from config import PROPOSAL_NUM, SAVE_FREQ, LR, WD, resume
 from core import model, dataset
 from core.utils import init_log, progress_bar
 
 sys.path.append(os.getcwd())
 import pretrainedmodels
-from cutout import *
 from focalloss import *
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+# Command line options
+parser = OptionParser()
+
+# Base options
+parser.add_option("-s", "--save_dir", action="store", type="string", dest="save_dir", default="./output", help="Output directory")
+parser.add_option("-e", "--trainingEpochs", action="store", type="int", dest="trainingEpochs", default=10, help="Number of training epochs")
+parser.add_option("-b", "--batchSize", action="store", type="int", dest="batchSize", default=16, help="Batch Size")
+#Input Reader Params
+arser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
+parser.add_option("--cutout", action="store_true", dest="cutout", default=False, help="applying cutout")
+parser.add_option("--focal", action="store_true", dest="focal", default=False, help="applying focal loss")
+
+# Parse command line options
+(options, args) = parser.parse_args()
+print(options)
+
 start_epoch = 1
-save_dir = 'NTS_model'
-if os.path.exists(save_dir):
+if os.path.exists(options.save_dir):
     raise NameError('model dir exists!')
-os.makedirs(save_dir)
-logging = init_log(save_dir)
+os.makedirs(options.save_dir)
+logging = init_log(options.save_dir)
 _print = logging.info
 
 # read dataset
 trainset = dataset.CUB(root_dir='core/2016train', is_train=True)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE,
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=options.batchSize,
                                           shuffle=True, num_workers=0, drop_last=False)
 testset = dataset.CUB(root_dir='core/2016test', is_train=False)
-testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
+testloader = torch.utils.data.DataLoader(testset, batch_size=options.batchSize,
                                          shuffle=False, num_workers=0, drop_last=False)
 # define model
 net = model.attention_net(topN=PROPOSAL_NUM)
@@ -54,7 +68,7 @@ schedulers = [MultiStepLR(raw_optimizer, milestones=[60, 100], gamma=0.1),
 net = net.cuda()
 net = DataParallel(net)
 
-for epoch in range(start_epoch, 11):
+for epoch in range(start_epoch, options.trainingEpochs+1):
     for scheduler in schedulers:
         scheduler.step()
     ##########################  train the model  ###############################
@@ -71,11 +85,18 @@ for epoch in range(start_epoch, 11):
         raw_logits, concat_logits, part_logits, _, top_n_prob = net(img)
         part_loss = model.list_loss(part_logits.view(batch_size * PROPOSAL_NUM, -1),
                                     label.unsqueeze(1).repeat(1, PROPOSAL_NUM).view(-1)).view(batch_size, PROPOSAL_NUM)
-        raw_loss = creterion(raw_logits, label)
-        concat_loss = creterion(concat_logits, label)
-        rank_loss = model.ranking_loss(top_n_prob, part_loss)
-        partcls_loss = creterion(part_logits.view(batch_size * PROPOSAL_NUM, -1),
-                                 label.unsqueeze(1).repeat(1, PROPOSAL_NUM).view(-1))
+        if options.focal:
+            raw_loss = FocalLoss(gamma=0.5)(raw_logits, label)
+            concat_loss = FocalLoss(gamma=0.5)(concat_logits, label)
+            rank_loss = model.ranking_loss(top_n_prob, part_loss)
+            partcls_loss = FocalLoss(gamma=0.5)(part_logits.view(batch_size * PROPOSAL_NUM, -1),
+                                     label.unsqueeze(1).repeat(1, PROPOSAL_NUM).view(-1))
+        else:
+            raw_loss = creterion(raw_logits, label)
+            concat_loss = creterion(concat_logits, label)
+            rank_loss = model.ranking_loss(top_n_prob, part_loss)
+            partcls_loss = creterion(part_logits.view(batch_size * PROPOSAL_NUM, -1),
+                                     label.unsqueeze(1).repeat(1, PROPOSAL_NUM).view(-1))
 
         total_loss = raw_loss + rank_loss + concat_loss + partcls_loss
         total_loss.backward()
@@ -98,7 +119,10 @@ for epoch in range(start_epoch, 11):
                 batch_size = img.size(0)
                 _, concat_logits, _, _, _ = net(img)
                 # calculate loss
-                concat_loss = creterion(concat_logits, label)
+                if options.focal:
+                    concat_loss = FocalLoss(gamma=0.5)(concat_logits, label)
+                else:
+                    concat_loss = creterion(concat_logits, label)
                 # calculate accuracy
                 _, concat_predict = torch.max(concat_logits, 1)
                 total += batch_size
@@ -126,7 +150,10 @@ for epoch in range(start_epoch, 11):
                 batch_size = img.size(0)
                 _, concat_logits, _, _, _ = net(img)
                 # calculate loss
-                concat_loss = creterion(concat_logits, label)
+                if options.focal:
+                    concat_loss = FocalLoss(gamma=0.5)(concat_logits, label)
+                else:
+                    concat_loss = creterion(concat_logits, label)
                 # calculate accuracy
                 _, concat_predict = torch.max(concat_logits, 1)
                 total += batch_size
@@ -145,8 +172,8 @@ for epoch in range(start_epoch, 11):
 
         ##########################  save model  ###############################
         net_state_dict = net.module.state_dict()
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
+        if not os.path.exists(options.save_dir):
+            os.mkdir(options.save_dir)
         torch.save({
             'epoch': epoch,
             'train_loss': train_loss,
@@ -154,6 +181,6 @@ for epoch in range(start_epoch, 11):
             'test_loss': test_loss,
             'test_acc': test_acc,
             'net_state_dict': net_state_dict},
-            os.path.join(save_dir, '%03d.ckpt' % epoch))
+            os.path.join(options.save_dir, '%03d.ckpt' % epoch))
 
 print('finishing training')

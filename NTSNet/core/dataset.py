@@ -1,11 +1,13 @@
 import numpy as np
 import scipy.misc
-import os
+import os, sys
 from PIL import Image
 from torchvision import transforms
 import pandas as pd
 import random
 from random import shuffle
+sys.path.append(os.getcwd())
+#from cutout import *
 
 class CUB():
     def __init__(self, root_dir, is_train=True):
