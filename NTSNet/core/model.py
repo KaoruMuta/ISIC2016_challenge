@@ -6,6 +6,7 @@ from core import resnet
 import numpy as np
 from core.anchors import generate_default_anchor_maps, hard_nms
 from config import CAT_NUM, PROPOSAL_NUM
+import pretrainedmodels
 
 
 class ProposalNet(nn.Module):
@@ -33,13 +34,13 @@ class ProposalNet(nn.Module):
 class attention_net(nn.Module):
     def __init__(self, topN=4):
         super(attention_net, self).__init__()
-        self.pretrained_model = resnet.resnet50(pretrained=True)
+        self.pretrained_model = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained=None)
         self.pretrained_model.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.pretrained_model.fc = nn.Linear(512 * 4, 200)
+        self.pretrained_model.last_linear = nn.Linear(512 * 4, 2)
         self.proposal_net = ProposalNet()
         self.topN = topN
-        self.concat_net = nn.Linear(2048 * (CAT_NUM + 1), 200)
-        self.partcls_net = nn.Linear(512 * 4, 200)
+        self.concat_net = nn.Linear(2048 * (CAT_NUM + 1), 2)
+        self.partcls_net = nn.Linear(512 * 4, 2)
         _, edge_anchors, _ = generate_default_anchor_maps()
         self.pad_side = 224
         self.edge_anchors = (edge_anchors + 224).astype(np.int)

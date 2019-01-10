@@ -9,7 +9,6 @@ from core import model, dataset
 from core.utils import init_log, progress_bar
 
 sys.path.append(os.pardir)
-import pretrainedmodels
 #from focalloss import *
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
