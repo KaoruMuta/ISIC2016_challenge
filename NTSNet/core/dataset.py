@@ -6,7 +6,7 @@ from torchvision import transforms
 import pandas as pd
 import random
 from random import shuffle
-sys.path.append(os.getcwd())
+sys.path.append(os.pardir)
 #from cutout import *
 
 class CUB():
