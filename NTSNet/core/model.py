@@ -34,7 +34,8 @@ class ProposalNet(nn.Module):
 class attention_net(nn.Module):
     def __init__(self, topN=4):
         super(attention_net, self).__init__()
-        self.pretrained_model = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained=None)
+        self.pretrained_model = resnet.resnet152(pretrained=True)
+        #self.pretrained_model = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained=None)
         self.pretrained_model.avgpool = nn.AdaptiveAvgPool2d(1)
         self.pretrained_model.last_linear = nn.Linear(512 * 4, 2)
         self.proposal_net = ProposalNet()
