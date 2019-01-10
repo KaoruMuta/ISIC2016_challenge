@@ -1,4 +1,5 @@
-import os
+from optparse import OptionParser
+import os, sys
 import torch.utils.data
 from torch.nn import DataParallel
 from datetime import datetime
@@ -6,6 +7,11 @@ from torch.optim.lr_scheduler import MultiStepLR
 from config import BATCH_SIZE, PROPOSAL_NUM, SAVE_FREQ, LR, WD, resume
 from core import model, dataset
 from core.utils import init_log, progress_bar
+
+sys.path.append(os.getcwd())
+import pretrainedmodels
+from cutout import *
+from focalloss import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 start_epoch = 1
