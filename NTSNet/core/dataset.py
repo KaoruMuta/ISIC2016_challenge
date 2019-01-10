@@ -92,7 +92,7 @@ if __name__ == '__main__':
         print(data[0].size(), data[1])
         if idx == 0:
             break
-    dataset = CUB(root_dir='2016train', is_train=False)
+    dataset = CUB(root_dir='2016test', is_train=False)
     print(len(dataset.test_img))
     print(len(dataset.test_label))
     for idx, data in enumerate(dataset):
