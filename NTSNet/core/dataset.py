@@ -88,10 +88,14 @@ if __name__ == '__main__':
     dataset = CUB(root_dir='2016train')
     print(len(dataset.train_img))
     print(len(dataset.train_label))
-    for data in dataset:
+    for idx, data in enumerate(dataset):
         print(data[0].size(), data[1])
+        if idx == 0:
+            break
     dataset = CUB(root_dir='2016train', is_train=False)
     print(len(dataset.test_img))
     print(len(dataset.test_label))
-    for data in dataset:
+    for idx, data in enumerate(dataset):
         print(data[0].size(), data[1])
+        if idx == 0:
+            break

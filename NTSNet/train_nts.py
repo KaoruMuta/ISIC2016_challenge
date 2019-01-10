@@ -79,8 +79,6 @@ for epoch in range(start_epoch, 11):
         partcls_optimizer.step()
         progress_bar(i, len(trainloader), 'train')
 
-    print('epoch:', epoch)
-
     ##########################  evaluate net and save model  ###############################
     if epoch % SAVE_FREQ == 0:
         ##########################  evaluate net on test set  ###############################
