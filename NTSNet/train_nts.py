@@ -10,7 +10,7 @@ from core.utils import init_log, progress_bar
 
 sys.path.append(os.pardir)
 import pretrainedmodels
-from focalloss import *
+#from focalloss import *
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 # Command line options
@@ -21,7 +21,7 @@ parser.add_option("-s", "--save_dir", action="store", type="string", dest="save_
 parser.add_option("-e", "--trainingEpochs", action="store", type="int", dest="trainingEpochs", default=10, help="Number of training epochs")
 parser.add_option("-b", "--batchSize", action="store", type="int", dest="batchSize", default=16, help="Batch Size")
 #Input Reader Params
-arser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
+parser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
 parser.add_option("--cutout", action="store_true", dest="cutout", default=False, help="applying cutout")
 parser.add_option("--focal", action="store_true", dest="focal", default=False, help="applying focal loss")
 
