@@ -396,7 +396,7 @@ def train(options):
 
     with open(os.path.join(options.outputDir, 'accuracy.txt'), 'a') as f3:
         print(accuracy, file=f3)
-        print(roc_auc['micro'], file=f3)
+        print(roc_auc, file=f3)
         print(classification_report(gtLabels, predictedLabels), file=f3)
 
     with open(os.path.join(options.outputDir, 'gtLabel.txt'), 'a') as gtchecking:
