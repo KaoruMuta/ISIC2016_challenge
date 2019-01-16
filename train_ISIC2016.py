@@ -366,6 +366,11 @@ def train(options):
             predictedLabels.append(plbs[i][j])
             gtLabels.append(glbs[i][j])
 
+    for i in range(len(gtLabels)):
+        oh = np.zeros(2)
+        oh[gtLabels[i]] = 1.0
+        oneHot.append(oh)
+
     oneHot = np.asarray(oneHot)
     pred_fold = np.asarray(pred_fold)
 
