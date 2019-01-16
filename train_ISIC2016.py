@@ -145,6 +145,12 @@ def returnCAM(feature_conv, weight_softmax, class_idx):
     # generate the class activation maps upsample to 256x256
     size_upsample = (256, 256)
     bz, nc, h, w = feature_conv.shape
+    print('bz', bz)
+    print('nc', nc)
+    print('h', h)
+    print('w', w)
+    print('weight_softmax', weight_softmax)
+
     output_cam = []
     for idx in class_idx:
         cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h*w)))
@@ -242,7 +248,7 @@ def train(options):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std),
-            Cutout(n_holes=2, length=16)]) #These are default values
+            Cutout(n_holes=1, length=16)]) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
@@ -336,6 +342,7 @@ def train(options):
     model._modules.get(finalconv_name).register_forward_hook(hook_feature)
     # get the softmax weight
     params = list(model.parameters())
+    print('params', params)
     weight_softmax = np.squeeze(params[-2].data.cpu().numpy())
     for iterationIdx, data in enumerate(dataLoaderVal):
         X = data["data"]
@@ -407,6 +414,8 @@ def train(options):
             print(predictedLabels[idx], file=predchecking)
 
     # generate class activation mapping for the top1 prediction
+    print('feature_brobs', features_blobs)
+    print('weight_softmax', weight_softmax)
     CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
 
     # render the CAM and output
