@@ -366,11 +366,6 @@ def train(options):
             predictedLabels.append(plbs[i][j])
             gtLabels.append(glbs[i][j])
 
-    for i in range(len(gtLabels)):
-        oh = np.zeros(2)
-        oh[gtLabels[i]] = 1.0
-        oneHot.append(oh)
-
     oneHot = np.asarray(oneHot)
     pred_fold = np.asarray(pred_fold)
 
@@ -382,20 +377,12 @@ def train(options):
     cnf_matrix = confusion_matrix(gtLabels, predictedLabels)
     plot_cfmatrix(cnf_matrix, classes=Classes, title='Confusion matrix', cmap=plt.cm.RdPu)
 
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-
-    for i in range(2):
-        fpr[i], tpr[i], _ = roc_curve(oneHot[:, i], pred_fold[:, i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    fpr['micro'], tpr['micro'], _ = roc_curve(oneHot.ravel(), pred_fold.ravel())
-    roc_auc['micro'] = auc(fpr['micro'], tpr['micro'])
-    print('AUC of fold:', roc_auc['micro'])
+    fpr, tpr, thresholds = roc_curve(oneHot[:, 1], pred_fold[:, 1])
+    roc_auc = auc(fpr, tpr)
+    print('AUC of fold:', roc_auc)
 
     plt.figure()
-    plt.plot(fpr['micro'], tpr['micro'], label='ROC curve')
+    plt.plot(fpr, tpr, label='ROC curve')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC curve')
@@ -415,14 +402,14 @@ def train(options):
             print(predictedLabels[idx], file=predchecking)
 
     # generate class activation mapping for the top1 prediction
-    '''CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
+    CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
 
     # render the CAM and output
     img = cv2.imread('2016test/ISIC_0000003.jpg')
     height, width, _ = img.shape
     heatmap = cv2.applyColorMap(cv2.resize(CAMs[0],(width, height)), cv2.COLORMAP_JET)
     result = heatmap * 0.3 + img * 0.5
-    cv2.imwrite('CAM.jpg', result)'''
+    cv2.imwrite('CAM.jpg', result)
 
     predictedLabels.clear()
     gtLabels.clear()
