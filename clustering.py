@@ -18,11 +18,11 @@ for root, dirs, files in os.walk('2016train'):
                 break
 
 print(len(totalfiles))
-'''for image in totalfiles:
+for image in totalfiles:
 	img = Image.open(image)
 	img = img.convert('RGB')
-	img = img.resize((224, 224))
-	img.save(os.path.join('clustering', image.split(os.sep)[-1]))'''
+	img = img.resize((256, 256))
+	img.save(os.path.join('clustering', image.split(os.sep)[-1]))
 
 feature = np.array([data.imread(f'./clustering/{path}') for path in os.listdir('clustering')])
 print(feature.shape)
