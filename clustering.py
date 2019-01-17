@@ -34,7 +34,7 @@ print(len(feature))
 #model = KMeans(n_clusters=3).fit(feature)
 #labels = model.labels_
 
-kmeans = KMeans(n_clusters=5)
+kmeans = KMeans(n_clusters=4)
 kmeans.fit(feature)
 y_kmeans = kmeans.predict(feature)
 
