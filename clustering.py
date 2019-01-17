@@ -43,4 +43,4 @@ for i in range(2, 10):
     centers = kmeans.cluster_centers_
     plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
 
-    plt.savefig('clustering' + i + '.png')
+    plt.savefig('clustering' + str(i) + '.png')
