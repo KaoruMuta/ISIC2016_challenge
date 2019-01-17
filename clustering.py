@@ -43,4 +43,4 @@ plt.scatter(feature[:, 0], feature[:, 1], c=y_kmeans, s=10, cmap='viridis')
 centers = kmeans.cluster_centers_
 plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
 
-plt.savefig(os.path.join('clustering.png')
+plt.savefig(os.path.join('clustering.png'))
