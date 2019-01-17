@@ -20,14 +20,12 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import auc, roc_curve
+from sklearn.metrics import auc, roc_auc_score
+from sklearn.metrics import roc_curve
 from enum import Enum
 # Custom imports
 import pretrainedmodels
 from cutout import *
-from focalloss import *
-import cv2
-#from se_resnext import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -37,6 +35,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Data(Enum):
     TRAIN = 1
     TEST = 2
+    VALIDATION = 3
 
 class MyDataset(Dataset):
     """My custom dataset."""
@@ -51,6 +50,7 @@ class MyDataset(Dataset):
         self.files = []
         self.trainfiles = []
         self.testfiles = []
+        self.valfiles = []
         self.imageFormats = [".jpg", ".png", ".bmp", 'jpeg']
         self.split = split
         self.isic2016train = pd.read_csv('ISBI2016_ISIC_Part3_Training_GroundTruth.csv', header=None)
@@ -79,6 +79,8 @@ class MyDataset(Dataset):
 
         for i in range(self.imagenumber):
             self.trainfiles.append(self.files[i])
+        for i in range(self.imagenumber, 900):
+            self.valfiles.append(self.files[i])
 
         self.transform = transform
         self.oneHot = False # Torch can't deal with one-hot vectors
@@ -135,30 +137,29 @@ class MyDataset(Dataset):
 
             sample = {'data': img, 'label': label}
 
+        elif self.split == Data.VALIDATION:
+            file = self.valfiles[idx]
+            img = Image.open(file)
+            img = img.convert('RGB')
+            if self.transform:
+                img = self.transform(img)
+
+            for i in range(900):
+                if file.split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
+                    if self.isic2016train.iloc[i][1] == 'benign':
+                        label = 0
+                    else:
+                        label = 1
+                    break
+
+            if self.oneHot:
+                oneHot = np.zeros(2)
+                oneHot[label] = 1.0
+                label = oneHot
+
+            sample = {'data': img, 'label': label}
+
         return sample
-
-features_blobs = []
-def hook_feature(module, input, output):
-    features_blobs.append(output.data.cpu().numpy())
-
-def returnCAM(feature_conv, weight_softmax, class_idx):
-    # generate the class activation maps upsample to 256x256
-    size_upsample = (256, 256)
-    bz, nc, h, w = feature_conv.shape
-    print('bz', bz)
-    print('nc', nc)
-    print('h', h)
-    print('w', w)
-
-    output_cam = []
-    for idx in class_idx:
-        cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h*w)))
-        cam = cam.reshape(h, w)
-        cam = cam - np.min(cam)
-        cam_img = cam / np.max(cam)
-        cam_img = np.uint8(255 * cam_img)
-        output_cam.append(cv2.resize(cam_img, size_upsample))
-    return output_cam
 
 def train(options):
     # Clear output directory
@@ -183,7 +184,6 @@ def train(options):
             for name2, params in child.named_parameters():
                 print(name, name2)
 
-        finalconv_name = 'features'
         ## Change the last layer
         inputDim = model.classifier.in_features
         model.classifier = torch.nn.Linear(inputDim, options.numClasses)
@@ -205,7 +205,6 @@ def train(options):
         std = model.std
         input_size = model.input_size[1]
 
-        finalconv_name = 'layer4'
         assert model.input_size[1] == model.input_size[2], "Error: Models expects different dimensions for height and width"
         assert model.input_space == "RGB", "Error: Data loaded in RGB format while the model expects BGR"
 
@@ -246,8 +245,8 @@ def train(options):
             transforms.RandomResizedCrop(input_size, scale=(0.7, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-            Cutout(n_holes=1, length=16)]) #These are default values
+            transforms.Normalize(mean=mean, std=std)]
+            Cutout(n_holes=1, length=16)) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
@@ -258,13 +257,18 @@ def train(options):
     print('loading train dataset')
     dataset = MyDataset(split=Data.TRAIN, imagenumber=options.imagenumber, transform=dataTransform)
     dataLoader = DataLoader(dataset=dataset, num_workers=0, batch_size=options.batchSize, shuffle=True)
-    assert options.numClasses == dataset.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (dataset1.getNumClasses(), options.numClasses)
+    assert options.numClasses == dataset.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (dataset.getNumClasses(), options.numClasses)
+
+    print('loading validation dataset')
+    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransformVal)
+    dataLoaderval = DataLoader(dataset=datasetval, num_workers=0, batch_size=options.batchSize, shuffle=False)
+    assert options.numClasses == datasetval.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetcal.getNumClasses(), options.numClasses)
 
     print('loading test dataset')
     datasetVal = MyDataset(split=Data.TEST, imagenumber=options.imagenumber, transform=dataTransformVal)
     dataLoaderVal = DataLoader(dataset=datasetVal, num_workers=0, batch_size=options.batchSize, shuffle=False)
 
-    assert options.numClasses == datasetVal.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetVal1.getNumClasses(), options.numClasses)
+    assert options.numClasses == datasetVal.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetVal.getNumClasses(), options.numClasses)
     # Define optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
@@ -282,17 +286,16 @@ def train(options):
             y = Variable(y).long().to(device)
             # Get model predictions
             pred = model(X)
+            _, preds = torch.max(pred.data, dim = 1)
             # Optimize
             optimizer.zero_grad()
-            if options.focal == True:
-                loss = FocalLoss(gamma=0.5)(pred, y)
-            else:
-                loss = criterion(pred, y)
+            loss = criterion(pred, y)
             train_loss += loss.item()
-            loss.backward()
-            optimizer.step()
+            if preds != y.data:
+                loss.backward()
+                optimizer.step()
 
-            _, preds = torch.max(pred.data, dim = 1)
+            #_, preds = torch.max(pred.data, dim = 1)
             plbs.append(preds.cpu().numpy())
             glbs.append(y.data.cpu().numpy())
             if iterationIdx % options.displayStep == 0:
@@ -317,6 +320,8 @@ def train(options):
 
         scheduler.step()
 
+        model.eval()
+
         predictedLabels.clear()
         gtLabels.clear()
         plbs.clear()
@@ -337,11 +342,6 @@ def train(options):
     oneHot = []
     pred_fold = []
     model.eval()
-    #hooked feature map
-    model._modules.get(finalconv_name).register_forward_hook(hook_feature)
-    # get the softmax weight
-    params = list(model.parameters())
-    weight_softmax = np.squeeze(params[-2].data.cpu().numpy())
     for iterationIdx, data in enumerate(dataLoaderVal):
         X = data["data"]
         y = data["label"]
@@ -387,12 +387,20 @@ def train(options):
     cnf_matrix = confusion_matrix(gtLabels, predictedLabels)
     plot_cfmatrix(cnf_matrix, classes=Classes, title='Confusion matrix', cmap=plt.cm.RdPu)
 
-    fpr, tpr, thresholds = roc_curve(oneHot[:, 1], pred_fold[:, 1])
-    roc_auc = auc(fpr, tpr)
-    print('AUC of fold:', roc_auc)
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+
+    for i in range(2):
+        fpr[i], tpr[i], _ = roc_curve(oneHot[:, i], pred_fold[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    fpr['micro'], tpr['micro'], _ = roc_curve(oneHot.ravel(), pred_fold.ravel())
+    roc_auc['micro'] = auc(fpr['micro'], tpr['micro'])
+    print('AUC of fold:', roc_auc['micro'])
 
     plt.figure()
-    plt.plot(fpr, tpr, label='ROC curve')
+    plt.plot(fpr['micro'], tpr['micro'], label='ROC curve')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC curve')
@@ -401,7 +409,7 @@ def train(options):
 
     with open(os.path.join(options.outputDir, 'accuracy.txt'), 'a') as f3:
         print(accuracy, file=f3)
-        print(roc_auc, file=f3)
+        print(roc_auc['micro'], file=f3)
         print(classification_report(gtLabels, predictedLabels), file=f3)
 
     with open(os.path.join(options.outputDir, 'gtLabel.txt'), 'a') as gtchecking:
@@ -411,20 +419,11 @@ def train(options):
         for idx in range(len(predictedLabels)):
             print(predictedLabels[idx], file=predchecking)
 
-    # generate class activation mapping for the top1 prediction
-    CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
-
-    # render the CAM and output
-    img = cv2.imread('2016test/ISIC_0000003.jpg')
-    height, width, _ = img.shape
-    heatmap = cv2.applyColorMap(cv2.resize(CAMs[0],(width, height)), cv2.COLORMAP_JET)
-    result = heatmap * 0.3 + img * 0.5
-    cv2.imwrite('CAM.jpg', result)
-
     predictedLabels.clear()
     gtLabels.clear()
     plbs.clear()
     glbs.clear()
+
 
 def plot(options):
     tloss_x = []
@@ -515,7 +514,6 @@ if __name__ == "__main__":
     parser.add_option("--useTorchVisionModels", action="store_true", dest="useTorchVisionModels", default=False, help="Use pre-trained models from the torchvision library")
     parser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
     parser.add_option("--cutout", action="store_true", dest="cutout", default=False, help="applying cutout")
-    parser.add_option("--focal", action="store_true", dest="focal", default=False, help="applying focal loss")
 
     #parser.add_option('--lr', action='store', type='float', dest='learning rate', default=0.0001, help='learning rate')
 
