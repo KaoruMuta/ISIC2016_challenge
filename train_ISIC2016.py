@@ -149,7 +149,6 @@ def returnCAM(feature_conv, weight_softmax, class_idx):
     print('nc', nc)
     print('h', h)
     print('w', w)
-    print('weight_softmax', weight_softmax)
 
     output_cam = []
     for idx in class_idx:
@@ -342,7 +341,6 @@ def train(options):
     model._modules.get(finalconv_name).register_forward_hook(hook_feature)
     # get the softmax weight
     params = list(model.parameters())
-    print('params', params)
     weight_softmax = np.squeeze(params[-2].data.cpu().numpy())
     for iterationIdx, data in enumerate(dataLoaderVal):
         X = data["data"]
@@ -414,8 +412,6 @@ def train(options):
             print(predictedLabels[idx], file=predchecking)
 
     # generate class activation mapping for the top1 prediction
-    print('feature_brobs', features_blobs)
-    print('weight_softmax', weight_softmax)
     CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
 
     # render the CAM and output
