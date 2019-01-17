@@ -33,14 +33,14 @@ print(len(feature))
 
 #model = KMeans(n_clusters=3).fit(feature)
 #labels = model.labels_
+for i in range(10):
+    kmeans = KMeans(n_clusters=)
+    kmeans.fit(feature)
+    y_kmeans = kmeans.predict(feature)
 
-kmeans = KMeans(n_clusters=4)
-kmeans.fit(feature)
-y_kmeans = kmeans.predict(feature)
+    plt.figure()
+    plt.scatter(feature[:, 0], feature[:, 1], c=y_kmeans, s=10, cmap='viridis')
+    centers = kmeans.cluster_centers_
+    plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
 
-plt.figure()
-plt.scatter(feature[:, 0], feature[:, 1], c=y_kmeans, s=10, cmap='viridis')
-centers = kmeans.cluster_centers_
-plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
-
-plt.savefig(os.path.join('clustering.png'))
+    plt.savefig('clustering' + i + '.png')
