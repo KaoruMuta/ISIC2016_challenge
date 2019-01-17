@@ -321,6 +321,34 @@ def train(options):
         scheduler.step()
 
         model.eval()
+        for iterationIdx, data in enumerate(dataLoaderval):
+            X = data["data"]
+            y = data["label"]
+            # Move the data to PyTorch on the desired device
+            X = Variable(X).float().to(device)
+            y = Variable(y).long().to(device)
+            #testing the dataset
+            bs, ncrops, c, h, w = X.size()
+            with torch.no_grad():
+                temp_output = model(X.view(-1, c, h, w))
+            outputs = temp_output.view(bs, ncrops, -1).mean(1)
+
+            _, preds = torch.max(outputs.data, dim = 1)
+            loss = criterion(outputs, y)
+            val_loss += loss.item()
+            correctExamples += (preds == y.data).sum().item()
+            #converting tensor to numpy
+            plbs.append(preds.cpu().numpy())
+            glbs.append(y.data.cpu().numpy())
+
+        for i in range(len(plbs)):
+            for j in range(len(plbs[i])):
+                predictedLabels.append(plbs[i][j])
+                gtLabels.append(glbs[i][j])
+
+        accuracy = accuracy_score(gtLabels, predictedLabels)
+        print("val_loss:", )
+        print('val_acc:', accuracy)
 
         predictedLabels.clear()
         gtLabels.clear()
