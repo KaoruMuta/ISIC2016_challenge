@@ -20,12 +20,14 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import auc, roc_auc_score
-from sklearn.metrics import roc_curve
+from sklearn.metrics import auc, roc_curve
 from enum import Enum
 # Custom imports
 import pretrainedmodels
 from cutout import *
+from focalloss import *
+import cv2
+#from se_resnext import *
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -95,6 +97,9 @@ class MyDataset(Dataset):
         elif self.split == Data.TEST:
             return len(self.testfiles)
 
+        elif self.split == Data.VALIDATION:
+            return len(self.valfiles)
+
     def __getitem__(self, idx):
         if self.split == Data.TRAIN:
             file = self.trainfiles[idx]
@@ -161,6 +166,29 @@ class MyDataset(Dataset):
 
         return sample
 
+features_blobs = []
+def hook_feature(module, input, output):
+    features_blobs.append(output.data.cpu().numpy())
+
+def returnCAM(feature_conv, weight_softmax, class_idx):
+    # generate the class activation maps upsample to 256x256
+    size_upsample = (256, 256)
+    bz, nc, h, w = feature_conv.shape
+    print('bz', bz)
+    print('nc', nc)
+    print('h', h)
+    print('w', w)
+
+    output_cam = []
+    for idx in class_idx:
+        cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h*w)))
+        cam = cam.reshape(h, w)
+        cam = cam - np.min(cam)
+        cam_img = cam / np.max(cam)
+        cam_img = np.uint8(255 * cam_img)
+        output_cam.append(cv2.resize(cam_img, size_upsample))
+    return output_cam
+
 def train(options):
     # Clear output directory
     if os.path.exists(options.outputDir):
@@ -184,6 +212,7 @@ def train(options):
             for name2, params in child.named_parameters():
                 print(name, name2)
 
+        finalconv_name = 'features'
         ## Change the last layer
         inputDim = model.classifier.in_features
         model.classifier = torch.nn.Linear(inputDim, options.numClasses)
@@ -205,6 +234,7 @@ def train(options):
         std = model.std
         input_size = model.input_size[1]
 
+        finalconv_name = 'layer4'
         assert model.input_size[1] == model.input_size[2], "Error: Models expects different dimensions for height and width"
         assert model.input_space == "RGB", "Error: Data loaded in RGB format while the model expects BGR"
 
@@ -245,8 +275,8 @@ def train(options):
             transforms.RandomResizedCrop(input_size, scale=(0.7, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)]
-            Cutout(n_holes=1, length=16)) #These are default values
+            transforms.Normalize(mean=mean, std=std),
+            Cutout(n_holes=1, length=16)]) #These are default values
 
     dataTransformVal = transforms.Compose([
         transforms.Resize(input_size),
@@ -260,9 +290,9 @@ def train(options):
     assert options.numClasses == dataset.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (dataset.getNumClasses(), options.numClasses)
 
     print('loading validation dataset')
-    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransformVal)
-    dataLoaderval = DataLoader(dataset=datasetval, num_workers=0, batch_size=options.batchSize, shuffle=False)
-    assert options.numClasses == datasetval.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetcal.getNumClasses(), options.numClasses)
+    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransform)
+    dataLoaderval = DataLoader(dataset=datasetval, num_workers=0, batch_size=options.batchSize, shuffle=True)
+    assert options.numClasses == datasetval.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetval.getNumClasses(), options.numClasses)
 
     print('loading test dataset')
     datasetVal = MyDataset(split=Data.TEST, imagenumber=options.imagenumber, transform=dataTransformVal)
@@ -286,16 +316,19 @@ def train(options):
             y = Variable(y).long().to(device)
             # Get model predictions
             pred = model(X)
-            _, preds = torch.max(pred.data, dim = 1)
             # Optimize
             optimizer.zero_grad()
-            loss = criterion(pred, y)
+            if options.focal == True:
+                loss = FocalLoss(gamma=0.5)(pred, y)
+            else:
+                loss = criterion(pred, y)
             train_loss += loss.item()
+            _, preds = torch.max(pred.data, dim = 1)
+
             if preds != y.data:
                 loss.backward()
                 optimizer.step()
 
-            #_, preds = torch.max(pred.data, dim = 1)
             plbs.append(preds.cpu().numpy())
             glbs.append(y.data.cpu().numpy())
             if iterationIdx % options.displayStep == 0:
@@ -319,37 +352,6 @@ def train(options):
             print(epoch_acc, file=f5)
 
         scheduler.step()
-
-        model.eval()
-        for iterationIdx, data in enumerate(dataLoaderval):
-            X = data["data"]
-            y = data["label"]
-            # Move the data to PyTorch on the desired device
-            X = Variable(X).float().to(device)
-            y = Variable(y).long().to(device)
-            #testing the dataset
-            bs, ncrops, c, h, w = X.size()
-            with torch.no_grad():
-                temp_output = model(X.view(-1, c, h, w))
-            outputs = temp_output.view(bs, ncrops, -1).mean(1)
-
-            _, preds = torch.max(outputs.data, dim = 1)
-            loss = criterion(outputs, y)
-            val_loss += loss.item()
-            correctExamples += (preds == y.data).sum().item()
-            #converting tensor to numpy
-            plbs.append(preds.cpu().numpy())
-            glbs.append(y.data.cpu().numpy())
-
-        for i in range(len(plbs)):
-            for j in range(len(plbs[i])):
-                predictedLabels.append(plbs[i][j])
-                gtLabels.append(glbs[i][j])
-
-        accuracy = accuracy_score(gtLabels, predictedLabels)
-        print("val_loss:", )
-        print('val_acc:', accuracy)
-
         predictedLabels.clear()
         gtLabels.clear()
         plbs.clear()
@@ -366,10 +368,50 @@ def train(options):
         if epoch == 9:
             torch.save(model.state_dict(), os.path.join(options.outputDir, "model_epoch10.pth"))
 
+        model.eval()
+        val_loss = 0
+        for iterationIdx, data in enumerate(dataLoaderval):
+            X = data["data"]
+            y = data["label"]
+            # Move the data to PyTorch on the desired device
+            X = Variable(X).float().to(device)
+            y = Variable(y).long().to(device)
+            #testing the dataset
+            bs, ncrops, c, h, w = X.size()
+            with torch.no_grad():
+                temp_output = model(X.view(-1, c, h, w))
+            outputs = temp_output.view(bs, ncrops, -1).mean(1)
+
+            _, preds = torch.max(outputs.data, dim = 1)
+            if options.focal == True:
+                loss = FocalLoss(gamma=0.5)(outputs, y)
+            else:
+                loss = criterion(outputs, y)
+            val_loss += loss.item()
+            plbs.append(preds.cpu().numpy())
+            glbs.append(y.data.cpu().numpy())
+
+        print('val_Loss:', val_loss / len(plbs))
+        for i in range(len(glbs)):
+            for j in range(len(glbs[i])):
+                gtLabels.append(glbs[i][j])
+
+        for i in range(len(plbs)):
+            for j in range(len(plbs[i])):
+                predictedLabels.append(plbs[i][j])
+
+        epoch_acc = accuracy_score(gtLabels, predictedLabels)
+        print('val_acc:', epoch_acc)
+
     correctExamples = 0
     oneHot = []
     pred_fold = []
     model.eval()
+    #hooked feature map
+    model._modules.get(finalconv_name).register_forward_hook(hook_feature)
+    # get the softmax weight
+    params = list(model.parameters())
+    weight_softmax = np.squeeze(params[-2].data.cpu().numpy())
     for iterationIdx, data in enumerate(dataLoaderVal):
         X = data["data"]
         y = data["label"]
@@ -415,20 +457,12 @@ def train(options):
     cnf_matrix = confusion_matrix(gtLabels, predictedLabels)
     plot_cfmatrix(cnf_matrix, classes=Classes, title='Confusion matrix', cmap=plt.cm.RdPu)
 
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-
-    for i in range(2):
-        fpr[i], tpr[i], _ = roc_curve(oneHot[:, i], pred_fold[:, i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    fpr['micro'], tpr['micro'], _ = roc_curve(oneHot.ravel(), pred_fold.ravel())
-    roc_auc['micro'] = auc(fpr['micro'], tpr['micro'])
-    print('AUC of fold:', roc_auc['micro'])
+    fpr, tpr, thresholds = roc_curve(oneHot[:, 1], pred_fold[:, 1])
+    roc_auc = auc(fpr, tpr)
+    print('AUC of fold:', roc_auc)
 
     plt.figure()
-    plt.plot(fpr['micro'], tpr['micro'], label='ROC curve')
+    plt.plot(fpr, tpr, label='ROC curve')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC curve')
@@ -437,7 +471,7 @@ def train(options):
 
     with open(os.path.join(options.outputDir, 'accuracy.txt'), 'a') as f3:
         print(accuracy, file=f3)
-        print(roc_auc['micro'], file=f3)
+        print(roc_auc, file=f3)
         print(classification_report(gtLabels, predictedLabels), file=f3)
 
     with open(os.path.join(options.outputDir, 'gtLabel.txt'), 'a') as gtchecking:
@@ -447,11 +481,20 @@ def train(options):
         for idx in range(len(predictedLabels)):
             print(predictedLabels[idx], file=predchecking)
 
+    # generate class activation mapping for the top1 prediction
+    '''CAMs = returnCAM(features_blobs[0], weight_softmax, predictedLabels)
+
+    # render the CAM and output
+    img = cv2.imread('2016test/ISIC_0000003.jpg')
+    height, width, _ = img.shape
+    heatmap = cv2.applyColorMap(cv2.resize(CAMs[0],(width, height)), cv2.COLORMAP_JET)
+    result = heatmap * 0.3 + img * 0.5
+    cv2.imwrite('CAM.jpg', result)'''
+
     predictedLabels.clear()
     gtLabels.clear()
     plbs.clear()
     glbs.clear()
-
 
 def plot(options):
     tloss_x = []
@@ -542,6 +585,7 @@ if __name__ == "__main__":
     parser.add_option("--useTorchVisionModels", action="store_true", dest="useTorchVisionModels", default=False, help="Use pre-trained models from the torchvision library")
     parser.add_option("--ft", action="store_true", dest="ft", default=False, help="Use pre-trained models from DermNet")
     parser.add_option("--cutout", action="store_true", dest="cutout", default=False, help="applying cutout")
+    parser.add_option("--focal", action="store_true", dest="focal", default=False, help="applying focal loss")
 
     #parser.add_option('--lr', action='store', type='float', dest='learning rate', default=0.0001, help='learning rate')
 
