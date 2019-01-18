@@ -10,6 +10,8 @@ from PIL import Image
 
 totalfiles = []
 imageFormats = ['.jpg', '.png', '.jpeg']
+isic2016train = pd.read_csv('ISBI2016_ISIC_Part3_Training_GroundTruth.csv', header=None)
+isic2016test = pd.read_csv('ISBI2016_ISIC_Part3_Test_GroundTruth.csv', header=None)
 for root, dirs, files in os.walk('2016train'):
     for file in files:
         for imageFormat in imageFormats:
@@ -18,8 +20,8 @@ for root, dirs, files in os.walk('2016train'):
                 break
 
 for i in range(900):
-    if file.split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
-        if self.isic2016train.iloc[i][1] == 'benign':
+    if file.split(os.sep)[-1] == isic2016train.iloc[i][0] + '.jpg':
+        if isic2016train.iloc[i][1] == 'benign':
             label[i] = 0
         else:
             label[i] = 1
