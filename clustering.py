@@ -28,8 +28,8 @@ for i in range(900):
 print(len(totalfiles))
 for i, image in enumerate(totalfiles):
 	img = Image.open(image)
-	img = img.convert('RGB')
-	img = img.resize((256, 256))
+    img = img.convert('RGB')
+    img = img.resize((256, 256))
     if label[i] == 0:
         img.save(os.path.join('dc/0', image.split(os.sep)[-1]))
     else:
