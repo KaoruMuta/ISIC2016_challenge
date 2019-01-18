@@ -37,7 +37,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Data(Enum):
     TRAIN = 1
     TEST = 2
-    VALIDATION = 3
 
 class MyDataset(Dataset):
     """My custom dataset."""
@@ -52,7 +51,6 @@ class MyDataset(Dataset):
         self.files = []
         self.trainfiles = []
         self.testfiles = []
-        self.valfiles = []
         self.imageFormats = [".jpg", ".png", ".bmp", 'jpeg']
         self.split = split
         self.isic2016train = pd.read_csv('ISBI2016_ISIC_Part3_Training_GroundTruth.csv', header=None)
@@ -81,8 +79,6 @@ class MyDataset(Dataset):
 
         for i in range(self.imagenumber):
             self.trainfiles.append(self.files[i])
-        for i in range(self.imagenumber, 900):
-            self.valfiles.append(self.files[i])
 
         self.transform = transform
         self.oneHot = False # Torch can't deal with one-hot vectors
@@ -96,9 +92,6 @@ class MyDataset(Dataset):
 
         elif self.split == Data.TEST:
             return len(self.testfiles)
-
-        elif self.split == Data.VALIDATION:
-            return len(self.valfiles)
 
     def __getitem__(self, idx):
         if self.split == Data.TRAIN:
@@ -137,28 +130,6 @@ class MyDataset(Dataset):
 
             if self.oneHot:
                 oneHot = np.zeros(self.getNumClasses())
-                oneHot[label] = 1.0
-                label = oneHot
-
-            sample = {'data': img, 'label': label}
-
-        elif self.split == Data.VALIDATION:
-            file = self.valfiles[idx]
-            img = Image.open(file)
-            img = img.convert('RGB')
-            if self.transform:
-                img = self.transform(img)
-
-            for i in range(900):
-                if file.split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
-                    if self.isic2016train.iloc[i][1] == 'benign':
-                        label = 0
-                    else:
-                        label = 1
-                    break
-
-            if self.oneHot:
-                oneHot = np.zeros(2)
                 oneHot[label] = 1.0
                 label = oneHot
 
@@ -289,11 +260,6 @@ def train(options):
     dataLoader = DataLoader(dataset=dataset, num_workers=0, batch_size=options.batchSize, shuffle=True)
     assert options.numClasses == dataset.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (dataset.getNumClasses(), options.numClasses)
 
-    print('loading validation dataset')
-    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransformVal)
-    dataLoaderval = DataLoader(dataset=datasetval, num_workers=0, batch_size=options.batchSize, shuffle=True)
-    assert options.numClasses == datasetval.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetval.getNumClasses(), options.numClasses)
-
     print('loading test dataset')
     datasetVal = MyDataset(split=Data.TEST, imagenumber=options.imagenumber, transform=dataTransformVal)
     dataLoaderVal = DataLoader(dataset=datasetVal, num_workers=0, batch_size=options.batchSize, shuffle=False)
@@ -368,41 +334,6 @@ def train(options):
             torch.save(model.state_dict(), os.path.join(options.outputDir, "model_epoch8.pth"))
         if epoch == 9:
             torch.save(model.state_dict(), os.path.join(options.outputDir, "model_epoch10.pth"))
-
-        model.eval()
-        val_loss = 0
-        for iterationIdx, data in enumerate(dataLoaderval):
-            X = data["data"]
-            y = data["label"]
-            # Move the data to PyTorch on the desired device
-            X = Variable(X).float().to(device)
-            y = Variable(y).long().to(device)
-            #testing the dataset
-            bs, ncrops, c, h, w = X.size()
-            with torch.no_grad():
-                temp_output = model(X.view(-1, c, h, w))
-            outputs = temp_output.view(bs, ncrops, -1).mean(1)
-
-            _, preds = torch.max(outputs.data, dim = 1)
-            if options.focal == True:
-                loss = FocalLoss(gamma=0.5)(outputs, y)
-            else:
-                loss = criterion(outputs, y)
-            val_loss += loss.item()
-            plbs.append(preds.cpu().numpy())
-            glbs.append(y.data.cpu().numpy())
-
-        print('val_Loss:', val_loss / len(plbs))
-        for i in range(len(glbs)):
-            for j in range(len(glbs[i])):
-                gtLabels.append(glbs[i][j])
-
-        for i in range(len(plbs)):
-            for j in range(len(plbs[i])):
-                predictedLabels.append(plbs[i][j])
-
-        epoch_acc = accuracy_score(gtLabels, predictedLabels)
-        print('val_acc:', epoch_acc)
 
     correctExamples = 0
     oneHot = []
