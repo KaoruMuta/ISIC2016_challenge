@@ -24,9 +24,9 @@ for root, dirs, files in os.walk('2016train'):
 for i in range(900):
     if file.split(os.sep)[-1] == isic2016train.iloc[i][0] + '.jpg':
         if isic2016train.iloc[i][1] == 'benign':
-            label[i] = 0
+            label.append(0)
         else:
-            label[i] = 1
+            label.append(1)
         break
 
 print(len(totalfiles))
