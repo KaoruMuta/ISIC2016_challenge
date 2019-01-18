@@ -17,17 +17,31 @@ for root, dirs, files in os.walk('2016train'):
                 totalfiles.append(os.path.abspath(os.path.join(root, file)))
                 break
 
+for i in range(900):
+    if file.split(os.sep)[-1] == self.isic2016train.iloc[i][0] + '.jpg':
+        if self.isic2016train.iloc[i][1] == 'benign':
+            label[i] = 0
+        else:
+            label[i] = 1
+        break
+
 print(len(totalfiles))
-'''for image in totalfiles:
+for i, image in enumerate(totalfiles):
 	img = Image.open(image)
 	img = img.convert('RGB')
 	img = img.resize((256, 256))
-	img.save(os.path.join('clustering', image.split(os.sep)[-1]))'''
+    if label[i] == 0:
+        img.save(os.path.join('dc/0', image.split(os.sep)[-1]))
+    else:
+        img.save(os.path.join('dc/1', image.split(os.sep)[-1]))
 
-feature = np.array([data.imread(f'./clustering/{path}') for path in os.listdir('clustering')])
+feature = np.array([data.imread(f'./dc/0/{path}') for path in os.listdir('clustering')])
 print(feature.shape)
 print(len(feature))
 feature = feature.reshape(len(feature), -1).astype(np.float64)
+plt.figure()
+plt.scatter(feature[:, 0], feature[:, 1], c='blue', s=10, cmap='viridis')
+plt.savefig('clustering1.png')
 print(feature.shape)
 print(len(feature))
 
