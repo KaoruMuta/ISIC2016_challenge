@@ -290,7 +290,7 @@ def train(options):
     assert options.numClasses == dataset.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (dataset.getNumClasses(), options.numClasses)
 
     print('loading validation dataset')
-    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransform)
+    datasetval = MyDataset(split=Data.VALIDATION, imagenumber=options.imagenumber, transform=dataTransformVal)
     dataLoaderval = DataLoader(dataset=datasetval, num_workers=0, batch_size=options.batchSize, shuffle=True)
     assert options.numClasses == datasetval.getNumClasses(), "Error: Number of classes found in the dataset is not equal to the number of classes specified in the options (%d != %d)!" % (datasetval.getNumClasses(), options.numClasses)
 
