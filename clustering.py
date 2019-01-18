@@ -34,7 +34,7 @@ for i, image in enumerate(totalfiles):
         img.save(os.path.join('dc/0', image.split(os.sep)[-1]))
     else:
         img.save(os.path.join('dc/1', image.split(os.sep)[-1]))
-
+    
 feature = np.array([data.imread(f'./dc/0/{path}') for path in os.listdir('clustering')])
 print(feature.shape)
 print(len(feature))
