@@ -13,6 +13,7 @@ totalfiles = []
 imageFormats = ['.jpg', '.png', '.jpeg']
 isic2016train = pd.read_csv('ISBI2016_ISIC_Part3_Training_GroundTruth.csv', header=None)
 isic2016test = pd.read_csv('ISBI2016_ISIC_Part3_Test_GroundTruth.csv', header=None)
+label = []
 for root, dirs, files in os.walk('2016train'):
     for file in files:
         for imageFormat in imageFormats:
