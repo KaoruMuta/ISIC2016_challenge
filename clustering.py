@@ -30,6 +30,7 @@ for i in range(900):
         break
 
 print(len(totalfiles))
+print(len(label))
 for i, image in enumerate(totalfiles):
     img = Image.open(image)
     img = img.convert('RGB')
