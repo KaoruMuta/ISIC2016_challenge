@@ -328,7 +328,7 @@ def train(options):
             plbs.append(preds.cpu().numpy())
             glbs.append(y.data.cpu().numpy())
 
-            if plbs[iterationIdx] != glbs[iterationIdx]:
+            if plbs[int(iterationIdx/16)][iterationIdx] != glbs[int(iterationIdx/16)][iterationIdx]
                 loss.backward()
                 optimizer.step()
 
