@@ -325,12 +325,13 @@ def train(options):
             train_loss += loss.item()
             _, preds = torch.max(pred.data, dim = 1)
 
-            if preds != y.data:
+            plbs.append(preds.cpu().numpy())
+            glbs.append(y.data.cpu().numpy())
+
+            if plbs[iterationIdx] != glbs[iterationIdx]:
                 loss.backward()
                 optimizer.step()
 
-            plbs.append(preds.cpu().numpy())
-            glbs.append(y.data.cpu().numpy())
             if iterationIdx % options.displayStep == 0:
                 print("Epoch %d | Iteration: %d | Loss: %.5f" % (epoch, iterationIdx, loss))
 
